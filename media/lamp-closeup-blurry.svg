@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220" role="img" aria-label="Illustration: blurry close-up of a lamp base; the damage can't be made out">
+  <defs>
+    <filter id="blur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="5"/></filter>
+  </defs>
+  <rect width="320" height="220" fill="#E8E1D4"/>
+  <g filter="url(#blur)">
+    <rect y="170" width="320" height="50" fill="#D6CCBA"/>
+    <path d="M100 30 Q70 110 95 185 L225 185 Q250 110 220 30 Z" fill="#9DB49A" stroke="#6E8A6B" stroke-width="2"/>
+    <polyline points="150,185 155,168 149,156 158,140 153,128 160,112" fill="none" stroke="#2E2B26" stroke-width="2"/>
+  </g>
+  <rect x="8" y="196" width="74" height="16" rx="3" fill="#0B1E3F" fill-opacity="0.75"/>
+  <text x="45" y="207.5" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9.5" fill="#FFFFFF">Illustration</text>
+</svg>

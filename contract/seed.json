@@ -1,0 +1,603 @@
+{
+  "_about": "Demo claims matching design/Main.dc.html (task A2). Loaded once on first start by task B1. All people, orders, payment IDs, photos and AI findings are mock. Times are offsets from the moment the seed is loaded; see _loader.",
+  "_loader": {
+    "times": "Any field ending in HoursAgo becomes an ISO timestamp (now − hours). deliveredHoursAgo → deliveredAt, submittedHoursAgo → submittedAt, hoursAgo on messages/decision/inspection/refund → at, capturedHoursAgo → capturedAt.",
+    "derived": "Compute decisionDueAt = submittedAt + policy.responseDays; pickupDueAt = decision.at + policy.pickupDays (approve_return only); inspectionDueAt = return.receivedAt + policy.inspectionDays.",
+    "defaults": "Fill as newClaim does: paymentStatus 'captured', policy snapshot, excluded false, refund null, inspection null, refundHistory [], audit [], version 1. Give each message an id. Refund ids: rfnd_mock_<claim number>.",
+    "assessment": "Do not run analyse() on seed claims at load. Build claim.assessment from assessmentFixture with mode 'simulated' and assessedAt = the fixture's hoursAgo. Until B4 ships, map it to the current shape: recommendation (needs_judgement → request_info), rationale, observations → array of text, uncertainty, authenticity {result:'inconclusive', details}. Rule checks (window, category) are computed by the server, never taken from the fixture.",
+    "evidence": "fixture: true means an illustration, not a real customer upload. image is a path under public/ that the server must serve (C1 creates the files; B1 adds the static route for /media/*.svg).",
+    "audit": "Write one audit entry per seeded event (claim created, assistant request, customer reply, decision, return stages, inspection, refund) so the tracking timeline has history.",
+    "openCount": 12
+  },
+
+  "claims": [
+    {
+      "id": "RR-1042",
+      "customer": "Ananya Sharma",
+      "customerContact": "ananya.sharma@example.com",
+      "customerOrderReference": "58213",
+      "item": "Ceramic table lamp · Sage",
+      "orderId": "ORD-58213",
+      "paymentId": "pay_MOCK8x2Lq",
+      "method": "UPI",
+      "amount": 349900,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "damaged",
+      "requestedResolution": "refund",
+      "description": "The lamp base has a crack running up from the bottom. I noticed it when I unpacked it today. The box looked fine from outside.",
+      "deliveredHoursAgo": 96.67,
+      "submittedHoursAgo": 44.3,
+      "status": "needs_decision",
+      "returnStage": null,
+      "assistantOn": true,
+      "evidence": [
+        { "id": "ev_1042_1", "kind": "closeup", "name": "IMG_2041.jpg", "fixture": true, "image": "/media/lamp-closeup-blurry.svg", "capturedHoursAgo": 44.32, "superseded": true, "supersededReason": "Too blurry to see the damage" },
+        { "id": "ev_1042_2", "kind": "closeup", "name": "IMG_2047.jpg", "fixture": true, "image": "/media/lamp-closeup.svg", "capturedHoursAgo": 28.85, "superseded": false },
+        { "id": "ev_1042_3", "kind": "full", "name": "IMG_2048.jpg", "fixture": true, "image": "/media/lamp-full.svg", "capturedHoursAgo": 28.83, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 44.3, "text": "The lamp base has a crack running up from the bottom. I noticed it when I unpacked it today. The box looked fine from outside.", "evidenceIds": ["ev_1042_1"] },
+        { "actor": "assistant", "hoursAgo": 44.28, "text": "Thanks, Ananya. The photo is a little blurry near the base, so the crack isn't clear yet. Could you send (1) a close-up of the crack in good light and (2) one photo of the whole lamp? This helps us resolve your request faster. If you can't take these photos, reply and a person will review your request.", "askedBecause": "Damage claims need a clear close-up and a full view (policy §3.2)" },
+        { "actor": "customer", "hoursAgo": 28.75, "text": "Here you go, close-up and the full lamp.", "evidenceIds": ["ev_1042_2", "ev_1042_3"] }
+      ],
+      "assessmentFixture": {
+        "hoursAgo": 28.73,
+        "recommendation": "approve_return",
+        "headline": "Approve the return. Refund after inspection.",
+        "rationale": "Claimed on day 2, inside the 7-day damage window. The close-up shows a crack that matches the customer's description. Because the photos can't show when the damage happened, the policy requires inspection before the refund is released.",
+        "needsJudgement": ["Transit or after delivery? The customer says the box looked undamaged. If you suspect courier damage, consider raising it with your logistics partner."],
+        "observations": [
+          { "kind": "observed", "text": "A hairline crack runs about 6 cm up from the bottom edge of the ceramic base (photo 2).", "evidenceIds": ["ev_1042_2"], "region": { "evidenceId": "ev_1042_2", "x": 0.42, "y": 0.46, "w": 0.12, "h": 0.41, "label": "Crack · ~6 cm" } },
+          { "kind": "observed", "text": "Colour (sage) and shape match the ordered item (photo 3).", "evidenceIds": ["ev_1042_3"] },
+          { "kind": "consistent", "text": "The crack's location matches the customer's description: \"running up from the bottom\".", "evidenceIds": ["ev_1042_2"] },
+          { "kind": "cannot_tell", "text": "When the damage happened. The photos can't show whether it occurred in transit or after delivery.", "evidenceIds": [] }
+        ],
+        "aiChecks": [
+          { "clauseId": "3.2", "label": "Damage evidence provided", "result": "pass", "facts": "Photos 2 and 3 meet this. Photo 1 was too blurry." },
+          { "clauseId": "2.4", "label": "Item unused", "result": "likely", "facts": "No signs of use in photo 3. Confirm at inspection." }
+        ],
+        "uncertainty": "Photos alone can't establish when the damage occurred.",
+        "authenticity": {
+          "result": "no_signals",
+          "checks": [
+            { "key": "c2pa", "label": "Content credentials (C2PA)", "result": "none_found", "detail": null },
+            { "key": "ai_watermark", "label": "AI-generation watermark", "result": "not_detected", "detail": null },
+            { "key": "capture_metadata", "label": "Capture time (metadata)", "result": "consistent", "detail": "Taken after delivery" },
+            { "key": "reverse_image", "label": "Matches online", "result": "none_found", "detail": null }
+          ],
+          "details": "No manipulation signals found. That isn't proof the photos are genuine: most real photos carry no watermark or credentials."
+        }
+      }
+    },
+
+    {
+      "id": "RR-1041",
+      "customer": "Rohan Mehta",
+      "customerContact": "rohan.mehta@example.com",
+      "customerOrderReference": "ORD-58190",
+      "item": "Linen bedsheet set · King",
+      "orderId": "ORD-58190",
+      "paymentId": "pay_MOCK3kR7w",
+      "method": "Card",
+      "amount": 219900,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "wrong_item",
+      "requestedResolution": "refund",
+      "description": "I ordered a King set but received Queen. The label says Queen.",
+      "deliveredHoursAgo": 100,
+      "submittedHoursAgo": 75,
+      "status": "needs_decision",
+      "returnStage": null,
+      "assistantOn": true,
+      "evidence": [
+        { "id": "ev_1041_1", "kind": "full", "name": "sheets.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 75.1, "superseded": false },
+        { "id": "ev_1041_2", "kind": "other", "name": "label.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 75.08, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 75, "text": "I ordered a King set but received Queen. The label says Queen.", "evidenceIds": ["ev_1041_1", "ev_1041_2"] }
+      ],
+      "assessmentFixture": {
+        "hoursAgo": 74.98,
+        "recommendation": "refund_now",
+        "headline": "Refund now.",
+        "rationale": "The label in the photo and the packing log both show the Queen size was sent instead of King.",
+        "needsJudgement": ["Decide whether to collect the Queen set or let the customer keep it."],
+        "observations": [
+          { "kind": "observed", "text": "The size label in the second photo reads Queen; the order was for King.", "evidenceIds": ["ev_1041_2"] },
+          { "kind": "consistent", "text": "The packing log shows the Queen SKU scanned against this order.", "evidenceIds": [] }
+        ],
+        "aiChecks": [
+          { "clauseId": "3.3", "label": "Wrong-item evidence provided", "result": "pass", "facts": "Item and label photos provided." }
+        ],
+        "uncertainty": "None material.",
+        "authenticity": {
+          "result": "no_signals",
+          "checks": [ { "key": "capture_metadata", "label": "Capture time (metadata)", "result": "consistent", "detail": "Taken after delivery" } ],
+          "details": "No manipulation signals found."
+        }
+      }
+    },
+
+    {
+      "id": "RR-1040",
+      "customer": "Kavya Iyer",
+      "customerContact": "+91 90000 00140",
+      "customerOrderReference": "58102",
+      "item": "Hand-painted mug set · Set of 4",
+      "orderId": "ORD-58102",
+      "paymentId": "pay_MOCK9pT4e",
+      "method": "UPI",
+      "amount": 164000,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "damaged",
+      "requestedResolution": "refund",
+      "description": "Two of the four mugs arrived chipped at the rim.",
+      "deliveredHoursAgo": 119,
+      "submittedHoursAgo": 87,
+      "status": "needs_decision",
+      "returnStage": null,
+      "assistantOn": true,
+      "evidence": [
+        { "id": "ev_1040_1", "kind": "closeup", "name": "mugs1.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": null, "superseded": false },
+        { "id": "ev_1040_2", "kind": "full", "name": "mugs2.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": null, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 87, "text": "Two of the four mugs arrived chipped at the rim.", "evidenceIds": ["ev_1040_1", "ev_1040_2"] }
+      ],
+      "assessmentFixture": {
+        "hoursAgo": 86.98,
+        "recommendation": "needs_judgement",
+        "headline": "Needs your judgement.",
+        "rationale": "The chips are visible, but one photo closely matches an image published online before this order.",
+        "needsJudgement": ["Ask for a new photo with the order slip in frame, or approve a return and inspect."],
+        "observations": [
+          { "kind": "observed", "text": "Two mugs show chips at the rim (first photo).", "evidenceIds": ["ev_1040_1"] },
+          { "kind": "contradiction", "text": "A near-identical image appears on a public review page dated before this order.", "evidenceIds": ["ev_1040_1"] }
+        ],
+        "aiChecks": [
+          { "clauseId": "3.2", "label": "Damage evidence provided", "result": "unclear", "facts": "Photos provided, but their origin is uncertain." }
+        ],
+        "uncertainty": "The photos' origin is uncertain. That doesn't show the claim is false.",
+        "authenticity": {
+          "result": "inconclusive",
+          "checks": [
+            { "key": "c2pa", "label": "Content credentials (C2PA)", "result": "none_found", "detail": null },
+            { "key": "ai_watermark", "label": "AI-generation watermark", "result": "not_detected", "detail": null },
+            { "key": "capture_metadata", "label": "Capture time (metadata)", "result": "unavailable", "detail": "No metadata in either photo" },
+            { "key": "reverse_image", "label": "Matches online", "result": "match_found", "detail": "Near-match on a public review page" }
+          ],
+          "details": "Inconclusive. A near-match online and missing metadata warrant a closer look, but don't prove the claim is false. This signal alone never leads to a decline."
+        }
+      }
+    },
+
+    {
+      "id": "RR-1039",
+      "customer": "Sameer Khan",
+      "customerContact": "sameer.khan@example.com",
+      "customerOrderReference": "58077",
+      "item": "Brass diya set · Set of 6",
+      "orderId": "ORD-58077",
+      "paymentId": "pay_MOCK2wQ8n",
+      "method": "Netbanking",
+      "amount": 125000,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "missing_item",
+      "requestedResolution": null,
+      "description": "One diya is missing from the set.",
+      "deliveredHoursAgo": 74,
+      "submittedHoursAgo": 28.5,
+      "status": "needs_decision",
+      "returnStage": null,
+      "assistantOn": true,
+      "evidence": [],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 28.5, "text": "One diya is missing from the set." }
+      ],
+      "assessmentFixture": {
+        "hoursAgo": 28.48,
+        "recommendation": "request_info",
+        "headline": "Ask which piece is missing.",
+        "rationale": "The packed weight (1.42 kg) matches all 6 pieces. Ask which piece is missing and, if possible, for a photo of the box contents.",
+        "needsJudgement": [],
+        "observations": [
+          { "kind": "contradiction", "text": "Packed weight matches 6 pieces, but the customer reports one missing.", "evidenceIds": [] },
+          { "kind": "cannot_tell", "text": "Which piece is missing; the claim doesn't say.", "evidenceIds": [] }
+        ],
+        "aiChecks": [
+          { "clauseId": "3.4", "label": "Missing item identified", "result": "fail", "facts": "The statement doesn't name the missing piece." }
+        ],
+        "uncertainty": "A photo may not establish that something was never received.",
+        "authenticity": { "result": "no_signals", "checks": [], "details": "No photos to check." }
+      }
+    },
+
+    {
+      "id": "RR-1038",
+      "customer": "Vikram Rao",
+      "customerContact": "vikram.rao@example.com",
+      "customerOrderReference": "57741",
+      "item": "Cotton throw · Indigo",
+      "orderId": "ORD-57741",
+      "paymentId": "pay_MOCK5hV1c",
+      "method": "Card",
+      "amount": 189900,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "preference",
+      "requestedResolution": "return",
+      "description": "The colour is darker than I expected. Unused, still folded.",
+      "deliveredHoursAgo": 334,
+      "submittedHoursAgo": 29.75,
+      "status": "needs_decision",
+      "returnStage": null,
+      "assistantOn": true,
+      "evidence": [],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 29.75, "text": "The colour is darker than I expected. Unused, still folded." }
+      ],
+      "assessmentFixture": {
+        "hoursAgo": 29.73,
+        "recommendation": "decline",
+        "headline": "Recommend declining.",
+        "rationale": "Submitted 12 days after delivery. Change-of-mind returns close after 7 days.",
+        "needsJudgement": ["Consider a goodwill exception for a first-time customer."],
+        "observations": [],
+        "aiChecks": [],
+        "uncertainty": "None material.",
+        "authenticity": { "result": "no_signals", "checks": [], "details": "No photos to check." }
+      }
+    },
+
+    {
+      "id": "RR-1037",
+      "customer": "Meera Joshi",
+      "customerContact": "meera.joshi@example.com",
+      "customerOrderReference": "58166",
+      "item": "Glass bud vase · Smoke",
+      "orderId": "ORD-58166",
+      "paymentId": "pay_MOCK7dF3s",
+      "method": "UPI",
+      "amount": 89900,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "damaged",
+      "requestedResolution": "refund",
+      "description": "The vase arrived with a crack near the neck.",
+      "deliveredHoursAgo": 75,
+      "submittedHoursAgo": 46.67,
+      "status": "waiting_customer",
+      "returnStage": null,
+      "assistantOn": true,
+      "evidence": [
+        { "id": "ev_1037_1", "kind": "closeup", "name": "vase.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 46.7, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 46.67, "text": "The vase arrived with a crack near the neck.", "evidenceIds": ["ev_1037_1"] },
+        { "actor": "assistant", "hoursAgo": 46.65, "text": "Thanks, Meera. Could you also send one photo of the whole vase, and the outer box if you still have it? It helps us check whether the damage happened in transit. If you can't, reply and a person will review your request.", "askedBecause": "Damage claims need a full view; a packaging photo is optional (policy §3.2)" }
+      ],
+      "assessmentFixture": {
+        "hoursAgo": 46.66,
+        "recommendation": "request_info",
+        "headline": "Waiting for a full-view photo.",
+        "rationale": "Only a close-up was provided. A full view is required for damage claims.",
+        "needsJudgement": [],
+        "observations": [
+          { "kind": "observed", "text": "A crack is visible near the neck of the vase.", "evidenceIds": ["ev_1037_1"] }
+        ],
+        "aiChecks": [
+          { "clauseId": "3.2", "label": "Damage evidence provided", "result": "fail", "facts": "Close-up provided; full view missing." }
+        ],
+        "uncertainty": "Photos alone can't establish when the damage occurred.",
+        "authenticity": { "result": "no_signals", "checks": [], "details": "Checks run when evidence is complete." }
+      }
+    },
+
+    {
+      "id": "RR-1035",
+      "customer": "Arjun Pillai",
+      "customerContact": "arjun.pillai@example.com",
+      "customerOrderReference": "58021",
+      "item": "Jute rug · 4 × 6 ft",
+      "orderId": "ORD-58021",
+      "paymentId": "pay_MOCK4gJ6y",
+      "method": "Card",
+      "amount": 425000,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "wrong_item",
+      "requestedResolution": "return",
+      "description": "This rug is smaller than what I ordered. I think it's the 3 x 5 one.",
+      "deliveredHoursAgo": 95.5,
+      "submittedHoursAgo": 53,
+      "status": "waiting_customer",
+      "returnStage": null,
+      "assistantOn": true,
+      "evidence": [],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 53, "text": "This rug is smaller than what I ordered. I think it's the 3 x 5 one." },
+        { "actor": "assistant", "hoursAgo": 52.98, "text": "Thanks, Arjun. Could you send a photo of the rug you received and a photo of its size label? We'll compare them with your order. If you can't, reply and a person will review your request.", "askedBecause": "Wrong-item claims need a photo of the item and its label (policy §3.3)" }
+      ],
+      "assessmentFixture": {
+        "hoursAgo": 52.99,
+        "recommendation": "request_info",
+        "headline": "Waiting for item and label photos.",
+        "rationale": "No photos yet. The size can't be confirmed from the description alone.",
+        "needsJudgement": [],
+        "observations": [],
+        "aiChecks": [
+          { "clauseId": "3.3", "label": "Wrong-item evidence provided", "result": "fail", "facts": "No photos provided." }
+        ],
+        "uncertainty": "None yet.",
+        "authenticity": { "result": "no_signals", "checks": [], "details": "No photos to check." }
+      }
+    },
+
+    {
+      "id": "RR-1033",
+      "customer": "Neha Gupta",
+      "customerContact": "neha.gupta@example.com",
+      "customerOrderReference": "57988",
+      "item": "Terracotta planter · Large",
+      "orderId": "ORD-57988",
+      "paymentId": "pay_MOCK1aZ9k",
+      "method": "UPI",
+      "amount": 115000,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "damaged",
+      "requestedResolution": "refund",
+      "description": "The planter rim is broken.",
+      "deliveredHoursAgo": 170,
+      "submittedHoursAgo": 125,
+      "status": "return_in_progress",
+      "returnStage": "awaiting_pickup",
+      "assistantOn": true,
+      "evidence": [
+        { "id": "ev_1033_1", "kind": "closeup", "name": "rim.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 125.1, "superseded": false },
+        { "id": "ev_1033_2", "kind": "full", "name": "planter.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 125.08, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 125, "text": "The planter rim is broken.", "evidenceIds": ["ev_1033_1", "ev_1033_2"] },
+        { "actor": "merchant", "hoursAgo": 96, "text": "Sorry about the planter, Neha. We've approved your return; our courier will collect it within 5 days. We'll refund you once it reaches us and is inspected." }
+      ],
+      "assessmentFixture": { "hoursAgo": 124.98, "recommendation": "approve_return", "headline": "Approve the return. Refund after inspection.", "rationale": "Within the window; close-up and full view show a broken rim.", "needsJudgement": [], "observations": [ { "kind": "observed", "text": "The rim is broken on one side.", "evidenceIds": ["ev_1033_1"] } ], "aiChecks": [], "uncertainty": "Photos alone can't establish when the damage occurred.", "authenticity": { "result": "no_signals", "checks": [], "details": "No manipulation signals found." } },
+      "decision": { "action": "approve_return", "reason": "", "override": false, "actor": "Nikhil Verma (Owner)", "hoursAgo": 96, "recommendation": "approve_return" }
+    },
+
+    {
+      "id": "RR-1031",
+      "customer": "Farhan Ali",
+      "customerContact": "farhan.ali@example.com",
+      "customerOrderReference": "57940",
+      "item": "Cushion cover set · Set of 2",
+      "orderId": "ORD-57940",
+      "paymentId": "pay_MOCK6tB2m",
+      "method": "UPI",
+      "amount": 129900,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "preference",
+      "requestedResolution": "return",
+      "description": "Doesn't suit the sofa. Unused, tags on.",
+      "deliveredHoursAgo": 196,
+      "submittedHoursAgo": 150,
+      "status": "return_in_progress",
+      "returnStage": "picked_up",
+      "assistantOn": true,
+      "evidence": [],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 150, "text": "Doesn't suit the sofa. Unused, tags on." },
+        { "actor": "merchant", "hoursAgo": 123, "text": "No problem, Farhan. We've approved your return. Please keep the tags on; we'll refund once it's back and checked." }
+      ],
+      "assessmentFixture": { "hoursAgo": 149.98, "recommendation": "approve_return", "headline": "Approve the return. Refund after inspection.", "rationale": "Change-of-mind return inside the 7-day window. Check for use and tags at inspection (§2.4).", "needsJudgement": [], "observations": [], "aiChecks": [], "uncertainty": "Condition can only be confirmed at inspection.", "authenticity": { "result": "no_signals", "checks": [], "details": "No photos to check." } },
+      "decision": { "action": "approve_return", "reason": "", "override": false, "actor": "Nikhil Verma (Owner)", "hoursAgo": 123, "recommendation": "approve_return" },
+      "return": { "pickedUpHoursAgo": 53 }
+    },
+
+    {
+      "id": "RR-1029",
+      "customer": "Divya Nair",
+      "customerContact": "divya.nair@example.com",
+      "customerOrderReference": "57902",
+      "item": "Ceramic dinner plates · Set of 4",
+      "orderId": "ORD-57902",
+      "paymentId": "pay_MOCK8nC5r",
+      "method": "Card",
+      "amount": 260000,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "wrong_item",
+      "requestedResolution": "refund",
+      "description": "Received side plates instead of dinner plates.",
+      "deliveredHoursAgo": 217,
+      "submittedHoursAgo": 172,
+      "status": "return_in_progress",
+      "returnStage": "received",
+      "assistantOn": true,
+      "evidence": [
+        { "id": "ev_1029_1", "kind": "full", "name": "plates.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 172.1, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 172, "text": "Received side plates instead of dinner plates.", "evidenceIds": ["ev_1029_1"] },
+        { "actor": "merchant", "hoursAgo": 149, "text": "Sorry for the mix-up, Divya. We've approved the return and will refund once the plates are back with us." }
+      ],
+      "assessmentFixture": { "hoursAgo": 171.98, "recommendation": "approve_return", "headline": "Approve the return. Refund after inspection.", "rationale": "Photo shows side plates; order was for dinner plates.", "needsJudgement": [], "observations": [ { "kind": "observed", "text": "Plates in the photo are side-plate size.", "evidenceIds": ["ev_1029_1"] } ], "aiChecks": [], "uncertainty": "None material.", "authenticity": { "result": "no_signals", "checks": [], "details": "No manipulation signals found." } },
+      "decision": { "action": "approve_return", "reason": "", "override": false, "actor": "Nikhil Verma (Owner)", "hoursAgo": 149, "recommendation": "approve_return" },
+      "return": { "pickedUpHoursAgo": 100, "receivedHoursAgo": 26 }
+    },
+
+    {
+      "id": "RR-1027",
+      "customer": "Ishaan Bose",
+      "customerContact": "ishaan.bose@example.com",
+      "customerOrderReference": "57861",
+      "item": "Wall clock · Walnut",
+      "orderId": "ORD-57861",
+      "paymentId": "pay_MOCK3vX7h",
+      "method": "Card",
+      "amount": 245000,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "damaged",
+      "requestedResolution": "refund",
+      "description": "Clock glass is cracked.",
+      "deliveredHoursAgo": 263,
+      "submittedHoursAgo": 221,
+      "status": "refund_processing",
+      "returnStage": "received",
+      "assistantOn": true,
+      "evidence": [
+        { "id": "ev_1027_1", "kind": "closeup", "name": "glass.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 221.1, "superseded": false },
+        { "id": "ev_1027_2", "kind": "full", "name": "clock.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 221.08, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 221, "text": "Clock glass is cracked.", "evidenceIds": ["ev_1027_1", "ev_1027_2"] },
+        { "actor": "merchant", "hoursAgo": 196, "text": "Sorry about that, Ishaan. We've approved your return and will refund once it's inspected." },
+        { "actor": "merchant", "hoursAgo": 51, "text": "Your clock passed inspection. We've started a refund of ₹2,450 to your original card." }
+      ],
+      "assessmentFixture": { "hoursAgo": 220.98, "recommendation": "approve_return", "headline": "Approve the return. Refund after inspection.", "rationale": "Cracked glass visible; within the window.", "needsJudgement": [], "observations": [ { "kind": "observed", "text": "The glass face is cracked across the centre.", "evidenceIds": ["ev_1027_1"] } ], "aiChecks": [], "uncertainty": "Photos alone can't establish when the damage occurred.", "authenticity": { "result": "no_signals", "checks": [], "details": "No manipulation signals found." } },
+      "decision": { "action": "approve_return", "reason": "", "override": false, "actor": "Nikhil Verma (Owner)", "hoursAgo": 196, "recommendation": "approve_return" },
+      "return": { "pickedUpHoursAgo": 149, "receivedHoursAgo": 72 },
+      "inspection": { "result": "pass", "reason": "Glass cracked as shown in the claim photos.", "actor": "Nikhil Verma (Owner)", "hoursAgo": 51.5 },
+      "refund": { "key": "seed-1027", "amount": 245000, "status": "processing", "method": "Card", "hoursAgo": 51 }
+    },
+
+    {
+      "id": "RR-1025",
+      "customer": "Tara Menon",
+      "customerContact": "tara.menon@example.com",
+      "customerOrderReference": "57830",
+      "item": "Table runner · Ochre",
+      "orderId": "ORD-57830",
+      "paymentId": "pay_MOCK5qL8d",
+      "method": "UPI",
+      "amount": 74900,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "wrong_item",
+      "requestedResolution": "refund",
+      "description": "Received a blue runner. I ordered ochre.",
+      "deliveredHoursAgo": 98.5,
+      "submittedHoursAgo": 73,
+      "status": "refund_processing",
+      "returnStage": null,
+      "assistantOn": true,
+      "inspectionException": true,
+      "evidence": [
+        { "id": "ev_1025_1", "kind": "full", "name": "runner.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 73.1, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 73, "text": "Received a blue runner. I ordered ochre.", "evidenceIds": ["ev_1025_1"] },
+        { "actor": "merchant", "hoursAgo": 29, "text": "Sorry, Tara. We've refunded ₹749 to your original UPI method. Please keep the blue runner." }
+      ],
+      "assessmentFixture": { "hoursAgo": 72.98, "recommendation": "refund_now", "headline": "Refund now.", "rationale": "Photo shows a blue runner; order was ochre. Low value; return shipping would cost more than the item.", "needsJudgement": [], "observations": [ { "kind": "observed", "text": "The runner in the photo is blue.", "evidenceIds": ["ev_1025_1"] } ], "aiChecks": [], "uncertainty": "None material.", "authenticity": { "result": "no_signals", "checks": [], "details": "No manipulation signals found." } },
+      "decision": { "action": "refund_now", "reason": "Low-value wrong item; customer keeps it.", "override": false, "actor": "Nikhil Verma (Owner)", "hoursAgo": 29.17, "recommendation": "refund_now" },
+      "refund": { "key": "seed-1025", "amount": 74900, "status": "processing", "method": "UPI", "hoursAgo": 29 }
+    },
+
+    {
+      "id": "RR-1024",
+      "customer": "Kabir Shah",
+      "customerContact": "kabir.shah@example.com",
+      "customerOrderReference": "57802",
+      "item": "Bamboo tray",
+      "orderId": "ORD-57802",
+      "paymentId": "pay_MOCK2eW4p",
+      "method": "UPI",
+      "amount": 199900,
+      "refunded": 199900,
+      "purchaseType": "physical",
+      "reason": "damaged",
+      "requestedResolution": "refund",
+      "description": "Tray is split along one side.",
+      "deliveredHoursAgo": 364,
+      "submittedHoursAgo": 339,
+      "status": "closed",
+      "returnStage": "received",
+      "assistantOn": true,
+      "evidence": [
+        { "id": "ev_1024_1", "kind": "closeup", "name": "split.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 339.1, "superseded": false },
+        { "id": "ev_1024_2", "kind": "full", "name": "tray.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 339.08, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 339, "text": "Tray is split along one side.", "evidenceIds": ["ev_1024_1", "ev_1024_2"] },
+        { "actor": "merchant", "hoursAgo": 317, "text": "Sorry, Kabir. We've approved your return." },
+        { "actor": "merchant", "hoursAgo": 172, "text": "Inspection passed. We've started your refund of ₹1,999." },
+        { "actor": "system", "hoursAgo": 78, "text": "Demo refund processed to the original payment method. No real money moved." }
+      ],
+      "assessmentFixture": { "hoursAgo": 338.98, "recommendation": "approve_return", "headline": "Approve the return. Refund after inspection.", "rationale": "Split visible; within the window.", "needsJudgement": [], "observations": [], "aiChecks": [], "uncertainty": "Photos alone can't establish when the damage occurred.", "authenticity": { "result": "no_signals", "checks": [], "details": "No manipulation signals found." } },
+      "decision": { "action": "approve_return", "reason": "", "override": false, "actor": "Nikhil Verma (Owner)", "hoursAgo": 317, "recommendation": "approve_return" },
+      "return": { "pickedUpHoursAgo": 269, "receivedHoursAgo": 195 },
+      "inspection": { "result": "pass", "reason": "Split confirmed.", "actor": "Nikhil Verma (Owner)", "hoursAgo": 173 },
+      "refund": { "key": "seed-1024", "amount": 199900, "status": "processed", "method": "UPI", "hoursAgo": 172 }
+    },
+
+    {
+      "id": "RR-1022",
+      "customer": "Riya Desai",
+      "customerContact": "riya.desai@example.com",
+      "customerOrderReference": "57655",
+      "item": "Linen apron",
+      "orderId": "ORD-57655",
+      "paymentId": "pay_MOCK9sK1t",
+      "method": "Card",
+      "amount": 115000,
+      "refunded": 0,
+      "purchaseType": "physical",
+      "reason": "preference",
+      "requestedResolution": "return",
+      "description": "Didn't like the fit.",
+      "deliveredHoursAgo": 576,
+      "submittedHoursAgo": 197,
+      "status": "declined",
+      "returnStage": null,
+      "assistantOn": true,
+      "evidence": [],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 197, "text": "Didn't like the fit." },
+        { "actor": "merchant", "hoursAgo": 102, "text": "Hi Riya, we're unable to accept this return. Change-of-mind returns need to be requested within 7 days of delivery (policy §2.2), and this request came 16 days after delivery." }
+      ],
+      "assessmentFixture": { "hoursAgo": 196.98, "recommendation": "decline", "headline": "Recommend declining.", "rationale": "Submitted 16 days after delivery; change-of-mind returns close after 7 days.", "needsJudgement": [], "observations": [], "aiChecks": [], "uncertainty": "None material.", "authenticity": { "result": "no_signals", "checks": [], "details": "No photos to check." } },
+      "decision": { "action": "decline", "reason": "Outside the 7-day change-of-mind window (§2.2).", "override": false, "actor": "Nikhil Verma (Owner)", "hoursAgo": 102, "recommendation": "decline" }
+    },
+
+    {
+      "id": "RR-1019",
+      "customer": "Aditya Rao",
+      "customerContact": "aditya.rao@example.com",
+      "customerOrderReference": "57590",
+      "item": "Stoneware bowl set",
+      "orderId": "ORD-57590",
+      "paymentId": "pay_MOCK7mH6u",
+      "method": "UPI",
+      "amount": 210000,
+      "refunded": 210000,
+      "purchaseType": "physical",
+      "reason": "wrong_item",
+      "requestedResolution": "refund",
+      "description": "Bowls are a different glaze from the listing.",
+      "deliveredHoursAgo": 461,
+      "submittedHoursAgo": 429,
+      "status": "closed",
+      "returnStage": null,
+      "assistantOn": true,
+      "inspectionException": true,
+      "evidence": [
+        { "id": "ev_1019_1", "kind": "full", "name": "bowls.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 429.1, "superseded": false }
+      ],
+      "messages": [
+        { "actor": "customer", "hoursAgo": 429, "text": "Bowls are a different glaze from the listing.", "evidenceIds": ["ev_1019_1"] },
+        { "actor": "merchant", "hoursAgo": 383, "text": "Thanks, Aditya. We've refunded ₹2,100 to your UPI method." },
+        { "actor": "system", "hoursAgo": 150, "text": "Demo refund processed to the original payment method. No real money moved." }
+      ],
+      "assessmentFixture": { "hoursAgo": 428.98, "recommendation": "request_info", "headline": "Ask for a daylight photo.", "rationale": "Glaze colour is hard to judge under indoor light.", "needsJudgement": [], "observations": [], "aiChecks": [], "uncertainty": "Lighting affects perceived colour.", "authenticity": { "result": "no_signals", "checks": [], "details": "No manipulation signals found." } },
+      "decision": { "action": "refund_now", "reason": "Glaze difference is clear against the listing photos; repeat customer.", "override": true, "actor": "Nikhil Verma (Owner)", "hoursAgo": 383, "recommendation": "request_info" },
+      "refund": { "key": "seed-1019", "amount": 210000, "status": "processed", "method": "UPI", "hoursAgo": 382.9 }
+    }
+  ]
+}

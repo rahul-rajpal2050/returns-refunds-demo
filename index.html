@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="api-mode" content="local">
+<title>Returns &amp; Refunds · Razorpay prototype</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="sidebar" aria-label="Dashboard">
+  <a class="brand" href="./#">
+    <span class="brand-mark" aria-hidden="true">R</span>
+    <span class="brand-text"><strong>Razorpay</strong><small>Merchant dashboard</small></span>
+  </a>
+  <div class="business"><small>Business</small><strong>Kaveri Home Studio</strong></div>
+  <div class="nav-list">
+    <span class="nav" title="Not part of this prototype"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</span>
+    <span class="nav" title="Not part of this prototype"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h14l-3-3M20 17H6l3 3"/></svg>Transactions</span>
+    <span class="nav" title="Not part of this prototype"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10h18M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18M12 3l9 5H3z"/></svg>Settlements</span>
+    <a class="nav selected" href="./#" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span class="nav-label">Returns &amp; Refunds</span><span class="badge" id="badge" aria-label="open requests">0</span></a>
+    <span class="nav" title="Not part of this prototype"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg>Customers</span>
+    <span class="nav" title="Not part of this prototype"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V11M10 20V5M16 20v-7M21 20H3"/></svg>Reports</span>
+  </div>
+  <p class="sidebar-note">Concept prototype, not an official Razorpay product. All orders, customers and AI findings are mock data.</p>
+</nav>
+<div class="page">
+  <header class="topbar">
+    <label class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span class="visually-hidden">Search requests</span>
+      <input id="search" type="search" placeholder="Search by request, order ID or customer" autocomplete="off">
+    </label>
+    <span class="spacer"></span>
+    <span class="mock-chip">Mock data · simulated AI</span>
+    <button type="button" id="reset-demo" class="reset-demo" hidden>Reset demo</button>
+    <div class="user"><span class="avatar" aria-hidden="true">NV</span><span class="user-text"><strong>Nikhil Verma</strong><small>Owner</small></span></div>
+  </header>
+  <main>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <div id="app"></div>
+  </main>
+</div>
+<dialog id="modal"></dialog>
+<script type="module" src="app.js"></script>
+</body>
+</html>
