@@ -214,7 +214,8 @@ function renderClaim(){
         <p class="note-box">${esc(auth.details||'No detector is connected.')} Exploratory and simulated: a signal prompts review and never leads to a decline on its own.</p>
       </div>
     </section>
-    <section class="col col-wide" aria-labelledby="col-decision"><h2 id="col-decision" class="col-title">Assessment &amp; decision</h2>
+    <section class="col col-wide" aria-labelledby="col-decision"><h2 id="col-decision" class="col-title">${active?'Assessment &amp; decision':'Next step &amp; tracking'}</h2>
+      ${active?'':tracking(c)}
       <div class="panel ${judgement?'panel-grey':'panel-blue'}">
         <div class="panel-head"><span class="rec-label">${judgement?'No recommendation':icon.spark+'Recommendation'}</span><small>Simulated · ${date(a.assessedAt)}</small></div>
         <p class="rec-headline">${esc(a.headline||labels[a.recommendation]||'Assessment pending')}</p>
@@ -224,13 +225,94 @@ function renderClaim(){
       <div class="panel"><div class="panel-head"><h3>Policy checks</h3><small>Sample policy v${esc(c.policy?.version)}</small></div>
         <ul class="checks">${(a.checks||[]).map(x=>{const [l,t]=checkResult[x.result]||[x.result,'grey'];return `<li><span class="check-result">${chip(l,t)}</span><div><strong>${esc(x.label)}</strong><small>${x.clauseId?'§'+esc(x.clauseId)+' ':''}${esc(isoToText(x.facts||x.source||''))}</small><small class="mono">${x.type==='rule'?'Rule check':'AI judgement'}</small></div></li>`;}).join('')}</ul>
       </div>
-      ${active?decisionHtml(c,a):tracking(c)}
+      ${active?decisionHtml(c,a):''}
       ${active?`<button type="button" class="link-button" data-action="analyse">Re-run assessment</button>`:''}
     </section>
   </div>
   <details class="panel history"><summary>Decision history and audit trail</summary>${c.decision?`<p>Decision: <strong>${esc(labels[c.decision.action]||c.decision.action)}</strong> by ${esc(c.decision.actor)} · ${date(c.decision.at)}${c.decision.override?' · overrode the recommendation':''}<br>${esc(c.decision.reason||'No reason needed: matched the recommendation.')}</p>`:''}<ol class="timeline">${c.audit.map(e=>`<li><small>${date(e.at)} · ${esc(e.actor)}</small><strong>${esc(String(e.action).replaceAll('_',' '))}</strong></li>`).join('')}</ol></details>`;
 }
-function tracking(c){let actions='';if(c.status==='return_in_progress'){actions=c.returnStage==='awaiting_pickup'?btn('Simulate courier pickup','picked_up','primary'):c.returnStage==='picked_up'?btn('Simulate item received','received','primary'):`<p>Item received. Inspection due ${date(c.inspectionDueAt)}</p>${btn('Inspection passed','pass','primary')}${btn('Inspection failed','fail','danger')}`;if(c.returnStage!=='received')actions+='<p class="muted">Inspection unlocks only after the item is received.</p>';}if(c.status==='refund_ready')actions=btn('Review refund amount','review-refund','primary');if(c.status==='refund_processing')actions=`<p>Demo refund ${money(c.refund.amount)} is processing.</p>${btn('Simulate processed','processed','primary')}${btn('Simulate failure','failed')}`;if(c.status==='inspection_review')actions=`<p>Inspection failed: ${esc(c.inspection.reason)}</p>${btn('Decline with policy reason','inspection-decline','danger')}${btn('Grant refund exception','inspection-refund')}`;if(c.status==='closed')actions='<p class="pill good">Demo refund processed · request closed</p>';return `<section class="card"><h2>Return & refund tracking</h2><p>${esc(({awaiting_pickup:'Awaiting pickup',picked_up:'In transit to merchant',received:'Received by merchant'})[c.returnStage]||'Return not started')}</p><div class="actions">${actions}</div>${c.pickupDueAt&&c.returnStage==='awaiting_pickup'?`<p class="muted">Sample pickup deadline: ${date(c.pickupDueAt)}</p>`:''}${c.refund?`<p class="muted">${esc(c.refund.id)}<br>Original payment method: ${esc(c.refund.method)}</p>`:''}</section>`;}
+// Outcome tracking (C5): design/Tracking.dc.html and RefundFailed.dc.html, shown after a decision.
+function parseDetail(e){try{const d=JSON.parse(e.detail);return d&&typeof d==='object'?d:{};}catch{return {};}}
+function auditStep(e){
+  const d=parseDetail(e),action=d.decision||d.action;
+  switch(e.action){
+    case 'claim_created': case 'created': return ['Claim received',''];
+    case 'evidence_requested': return ['Assistant asked for more evidence',''];
+    case 'evidence': return ['Customer sent a photo',''];
+    case 'assessment': case 'analyse': return ['Assessment updated',labels[e.detail]||''];
+    case 'decision': return [`${labels[action]||action} · ${d.actor||'Nikhil Verma (Owner)'}`,d.override?`Overrode the recommendation: ${d.reason||''}`:(d.reason||'Matched the recommendation')];
+    case 'return': return [d.stage==='picked_up'?'Courier picked up the item':'Item received',''];
+    case 'return_picked_up': return ['Courier picked up the item',''];
+    case 'return_received': return ['Item received',''];
+    case 'inspection': return [`Inspection ${d.result==='pass'?'passed':'failed'}`,d.reason||''];
+    case 'resolve-inspection': return [d.resolution==='refund'?'Refund exception approved':'Declined after inspection',d.reason||''];
+    case 'refund': return [`Refund initiated · ${money(d.amount||0)}`,d.partialReason?`Partial: ${d.partialReason}`:''];
+    case 'simulate-refund': return [d.result==='processed'?'Refund processed':'Refund failed',d.result==='processed'?'Demo; no real money moved':(d.failureReason||'')];
+    case 'refund_processed': return ['Refund processed','Demo; no real money moved'];
+    case 'assistant': return [d.enabled?'Assistant turned back on':'You took over the conversation',''];
+    case 'human_review': return ['Sent to you for review',e.detail||''];
+    case 'messages': case 'customer_message': return e.actor==='customer'?['Customer replied','']:null;
+    default: return null;
+  }
+}
+function upcomingSteps(c){
+  const p=c.policy||{},refund=['Refund settles','Per Razorpay refund timelines [verify in docs]'];
+  const release=['Refund released',`${money(c.amount-c.refunded)} to the original ${c.method} payment · you confirm`];
+  if(c.status==='return_in_progress'){
+    const inspect=['Received and inspected',`Within ${p.inspectionDays||2} days of receipt`];
+    if(c.returnStage==='awaiting_pickup')return [[`Courier pickup by ${date(c.pickupDueAt)}`,'Courier assigned'],inspect,release,refund];
+    if(c.returnStage==='picked_up')return [['In transit to you','No arrival date from the courier'],inspect,release,refund];
+    return [[`Inspect by ${date(c.inspectionDueAt)}`,'You record pass or fail'],release,refund];
+  }
+  if(c.status==='inspection_review')return [['Resolve the failed inspection','Decline, or refund as an exception'],refund];
+  if(c.status==='refund_ready')return [release,refund];
+  if(c.status==='refund_processing')return [refund];
+  return [];
+}
+function nextStepHtml(c){
+  const refundable=money(c.amount-c.refunded),lastFail=(c.refundHistory||[]).at(-1);
+  const demo='<small class="demo-tag">Demo control</small>';
+  const card=(title,body,actions,cls='')=>`<section class="panel panel-blue ${cls}" aria-labelledby="next-h"><div class="panel-head"><h3 id="next-h">${title}</h3></div>${body}<div class="next-actions">${actions}</div></section>`;
+  switch(c.status){
+    case 'return_in_progress':
+      if(c.returnStage==='awaiting_pickup')return card('Waiting for courier pickup',`<p>Pickup due ${date(c.pickupDueAt)}. Inspection unlocks when the item arrives.</p>`,`${demo}${btn('Courier picks up the item','picked_up')}`);
+      if(c.returnStage==='picked_up')return card('On its way back to you','<p>The courier has collected the item. Inspection unlocks when it arrives.</p>',`${demo}${btn('Item arrives','received')}`);
+      return card('Record inspection',`<p>Inspect by ${date(c.inspectionDueAt)}. Check the item matches the claim photos and is otherwise unused (§2.4). Your result decides whether the refund is released.</p>`,`${btn('Pass: matches the claim','pass','primary')}${btn('Fail: doesn’t match','fail','danger')}`);
+    case 'inspection_review':
+      return card('Inspection failed: your decision',`<div class="compare bad"><strong>Your notes</strong><span>${esc(c.inspection?.reason||'')}</span></div>`,`${btn('Decline…','inspection-decline','danger')}${btn('Refund anyway…','inspection-refund')}`);
+    case 'refund_ready':
+      if(lastFail)return card(`The refund of ${money(lastFail.amount)} didn’t go through`,`<div class="compare bad"><strong>Reason from the payment provider (simulated)</strong><span>${esc(lastFail.failureReason||'No reason given.')}</span></div><p class="muted">Tell ${esc(firstName(c))} about the delay before you retry; they were told the refund had started.</p>`,`${btn(`Retry refund of ${refundable}`,'review-refund','primary')}`,'panel-red');
+      return card('Release the refund',`<p>${c.inspection?.result==='pass'?'Inspection passed.':'Refund exception approved.'} No money moves until you confirm the amount.</p>`,btn(`Review refund of ${refundable}`,'review-refund','primary'));
+    case 'refund_processing':
+      return card(`Refund of ${money(c.refund?.amount||0)} initiated`,`<p>To the original ${esc(c.method)} payment. Settles per Razorpay refund timelines [verify in docs].</p>`,`${demo}${btn('Mark processed','processed')}${btn('Mark failed','failed')}`);
+    case 'closed':
+      return `<section class="panel panel-green"><div class="panel-head"><h3 class="with-icon">${icon.check}Refund processed · request closed</h3></div><p>${money(c.refunded)} refunded to the original ${esc(c.method)} payment. Demo: no real money moved.</p></section>`;
+    case 'declined':
+      return `<section class="panel"><div class="panel-head"><h3>Request declined</h3></div><p>${esc(c.decision?.reason||c.inspection?.reason||'')}</p></section>`;
+    default: return '';
+  }
+}
+function tracking(c){
+  const d=c.decision,history=c.refundHistory||[];
+  const created=Date.parse(c.submittedAt);
+  const done=c.audit.map(e=>({e,step:auditStep(e)})).filter(x=>x.step&&!(x.e.action==='customer_message'&&Math.abs(Date.parse(x.e.at)-created)<120000));
+  const upcoming=upcomingSteps(c);
+  return `${nextStepHtml(c)}
+  ${d?`<section class="panel"><div class="panel-head"><h3>Decision record</h3></div><dl class="record">
+    <dt>Decided by</dt><dd>${esc(d.actor||'Nikhil Verma (Owner)')}</dd>
+    <dt>When</dt><dd>${date(d.at)}</dd>
+    <dt>Decision</dt><dd>${esc(labels[d.action]||d.action)}</dd>
+    <dt>AI recommended</dt><dd>${esc(labels[d.recommendation]||d.recommendation||'—')} ${d.recommendation==='needs_judgement'?chip('No recommendation','grey'):d.override?chip('Overridden','amber'):chip('Matched','green')}</dd>
+    ${d.reason?`<dt>Reason</dt><dd>${esc(d.reason)}</dd>`:''}
+    <dt>Policy</dt><dd>Sample policy v${esc(c.policy?.version)}</dd>
+  </dl></section>`:''}
+  ${history.length?`<section class="panel"><div class="panel-head"><h3>Refund attempts</h3></div><ol class="attempts">${[...history,...(c.refund?[c.refund]:[])].map((r,i)=>`<li><span class="mono">${i+1}</span><span>${date(r.at)}</span><span class="mono">${money(r.amount)}</span>${chip(r.status==='failed'?'Failed':r.status==='processed'?'Processed':'Processing',r.status==='failed'?'red':r.status==='processed'?'green':'violet')}</li>`).join('')}</ol><small>A retry is a new attempt with its own reference. Failed attempts stay on record.</small></section>`:''}
+  <section class="panel" aria-labelledby="tl-h"><div class="panel-head"><h3 id="tl-h">Timeline</h3></div><ol class="track">
+    ${done.map(({e,step})=>`<li class="done"><span class="dot"></span><div><small class="mono">${date(e.at)}</small><strong>${esc(step[0])}</strong>${step[1]?`<small>${esc(step[1])}</small>`:''}</div></li>`).join('')}
+    ${upcoming.map(([t,s],i)=>`<li class="${i===0?'now':'next'}"><span class="dot"></span><div><small class="mono">${i===0?'Now':'Later'}</small><strong>${esc(t)}</strong><small>${esc(s)}</small></div></li>`).join('')}
+  </ol></section>`;
+}
+
 function dialog(title,content,submit){modal.className='';modal.innerHTML=`<form id="dialog-form"><h1>${title}</h1><div id="dialog-error" role="alert"></div>${content}<div class="actions"><button type="button" data-action="cancel">Cancel</button><button class="primary" type="submit">Confirm</button></div></form>`;modal.showModal();modal.querySelector('form').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{const ok=await submit(new FormData(e.target));if(ok)modal.close();else modal.querySelector('#dialog-error').textContent='Could not save. Check the error message in the dashboard.';}catch(err){modal.querySelector('#dialog-error').textContent=err.message;}finally{button.disabled=false;}};}
 // Confirmation dialogs (C4): design/Confirm.dc.html, RefundConfirm.dc.html, InspectionFailed.dc.html.
 const closeIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';

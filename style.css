@@ -348,3 +348,29 @@ dialog.dlg { padding: 0; width: min(680px, calc(100vw - 32px)); max-height: calc
 .dlg-foot .actions { margin: 0; }
 .danger-solid { background: var(--red); color: #fff; border: 0; }
 .danger-solid:hover { background: #8e1d14; }
+
+/* Outcome tracking: design/Tracking.dc.html, RefundFailed.dc.html */
+.panel-green { border: 2px solid #0b6b44; }
+.panel-green h3 { color: #0b4f33; }
+.panel-green .with-icon svg { stroke-width: 2.2; }
+.panel-red { border-color: var(--red); }
+.next-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.next-actions button { flex: 1 1 160px; }
+.demo-tag { flex-basis: 100%; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.record { grid-template-columns: 130px minmax(0, 1fr); gap: 8px 14px; font-size: 13.5px; line-height: 20px; }
+.record dd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.attempts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; }
+.attempts li { display: grid; grid-template-columns: 24px 1fr auto auto; gap: 10px; align-items: center; }
+.track { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.track li { display: flex; gap: 14px; position: relative; padding-bottom: 18px; }
+.track li:last-child { padding-bottom: 0; }
+.track li::before { content: ''; position: absolute; left: 7px; top: 18px; bottom: 0; width: 2px; background: #d5dce8; }
+.track li.done::before { background: var(--navy); }
+.track li:last-child::before { display: none; }
+.track .dot { flex-shrink: 0; width: 16px; height: 16px; border-radius: 999px; box-sizing: border-box; margin-top: 2px; background: #fff; border: 2px solid #b9c3d4; position: relative; z-index: 1; }
+.track li.done .dot { background: var(--navy); border-color: var(--navy); }
+.track li.now .dot { border: 4px solid var(--blue); }
+.track div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.track strong { font-size: 14px; }
+.track li.next strong { font-weight: 500; color: var(--muted-2); }
+.track small { font-size: 12.5px; overflow-wrap: anywhere; }
