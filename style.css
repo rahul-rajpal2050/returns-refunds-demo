@@ -299,3 +299,52 @@ dialog .actions { justify-content: flex-end; margin-top: 24px; }
 .link-button:hover { background: transparent; color: #14348f; }
 .history { margin: 0; }
 .history summary { font-size: 14px; }
+
+/* Confirmation dialogs: design/Confirm.dc.html, RefundConfirm.dc.html */
+dialog.dlg { padding: 0; width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+.confirm { display: flex; flex-direction: column; }
+.dlg-head { padding: 22px 26px 18px; border-bottom: 1px solid var(--line-2); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.dlg-head > div { display: flex; flex-direction: column; gap: 4px; }
+.dlg-head h2 { margin: 0; font-size: 22px; line-height: 30px; }
+.icon-button { width: 44px; height: 44px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; color: var(--muted-2); flex-shrink: 0; }
+.icon-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.dlg-body { padding: 20px 26px; display: flex; flex-direction: column; gap: 16px; }
+.dlg-body label { margin: 0 0 -8px; font-size: 13px; }
+.dlg-body textarea, .dlg-body input:not([type=radio]):not([type=checkbox]) { font-size: 14px; line-height: 21px; }
+.dialog-error:empty { display: none; }
+.dialog-error { background: #fde9e7; color: #9b261d; padding: 10px 12px; border-radius: 8px; font-size: 13.5px; }
+.dlg-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.dlg-tiles > div { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+.dlg-tiles strong { font-size: 14px; }
+.dlg-section { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px; }
+.dlg-label { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 0; }
+.dlg-label small { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
+.steps { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.steps li { border: 1px solid var(--control); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.steps li.now { border: 2px solid var(--blue); }
+.steps span { font-size: 12px; font-weight: 700; color: var(--muted); }
+.steps li.now span { color: var(--blue-ink); }
+.steps strong { font-size: 13.5px; }
+.steps small { font-size: 12px; }
+.compare { display: flex; flex-direction: column; gap: 4px; padding: 10px 14px; border-radius: 8px; font-size: 13.5px; line-height: 20px; }
+.compare.ok { flex-direction: row; align-items: center; gap: 8px; background: #e3f3ea; color: #0b4f33; font-weight: 600; }
+.compare.ok svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.compare.warn { background: #fff8e6; }
+.compare.warn strong { color: #704800; }
+.compare.bad { background: #fde9e7; color: #5e1710; }
+.compare.neutral { background: var(--surface-2); color: var(--muted-2); }
+.radio-card { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px; border: 1px solid var(--control); border-radius: 10px; margin: 0; font-weight: 400; cursor: pointer; }
+.radio-card:has(input:checked) { border: 2px solid var(--blue); }
+.radio-card input { width: 18px; height: 18px; margin: 0; accent-color: var(--blue); flex-shrink: 0; }
+.radio-card span { display: flex; flex-direction: column; gap: 2px; }
+.radio-card strong { font-size: 14px; }
+.amount-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.amount-choice legend { grid-column: 1 / -1; margin-bottom: 8px; }
+.partial-fields { display: flex; flex-direction: column; gap: 14px; }
+.partial-fields[hidden] { display: none; }
+.dlg-facts { grid-template-columns: 150px minmax(0, 1fr); gap: 8px 14px; font-size: 13.5px; line-height: 20px; padding: 12px 14px; background: var(--surface-2); border-radius: 10px; }
+.dlg-foot { padding: 16px 26px 22px; border-top: 1px solid var(--line-2); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.dlg-foot small { max-width: 300px; }
+.dlg-foot .actions { margin: 0; }
+.danger-solid { background: var(--red); color: #fff; border: 0; }
+.danger-solid:hover { background: #8e1d14; }

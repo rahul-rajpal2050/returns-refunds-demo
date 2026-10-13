@@ -15,11 +15,14 @@ export function convertOffsets(value, now) {
   }
   return result;
 }
+const ist=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
+export const istDate=s=>ist.format(new Date(s));
+
 export function ruleChecks(c) {
   const inWindow = claimWindow(c).claimWindowMet;
   const physical = (c.purchaseType || 'physical') === 'physical';
   return [
-    { label:'Claim window', result:inWindow?'pass':'review', source:c.policy.clauses.window, type:'rule', clauseId:c.reason==='preference'?'2.2':'2.1', facts:`Delivered ${c.deliveredAt}; submitted ${c.submittedAt}. Eligibility is measured at submission.` },
+    { label:'Claim window', result:inWindow?'pass':'review', source:c.policy.clauses.window, type:'rule', clauseId:c.reason==='preference'?'2.2':'2.1', facts:`Delivered ${istDate(c.deliveredAt)}; submitted ${istDate(c.submittedAt)}. Eligibility is measured at submission.` },
     { label:physical?'Item category':'Purchase eligibility', result:physical&&!c.excluded?'pass':'review', source:physical?c.policy.clauses.category:'Review the merchant’s service or digital refund terms.', type:'rule', clauseId:'1.3', facts:c.excluded?'Excluded by the merchant policy.':physical?'Not marked custom or final-sale.':'Purchase eligibility needs merchant review.' },
     { label:'Refund timing', result:physical?'inspect_first':'pass', source:c.policy.clauses.inspection, type:'rule', clauseId:'4.1', facts:physical?'Return approval and refund confirmation are separate actions.':'No physical inspection applies.' },
   ];

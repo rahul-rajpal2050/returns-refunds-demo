@@ -231,10 +231,144 @@ function renderClaim(){
   <details class="panel history"><summary>Decision history and audit trail</summary>${c.decision?`<p>Decision: <strong>${esc(labels[c.decision.action]||c.decision.action)}</strong> by ${esc(c.decision.actor)} · ${date(c.decision.at)}${c.decision.override?' · overrode the recommendation':''}<br>${esc(c.decision.reason||'No reason needed: matched the recommendation.')}</p>`:''}<ol class="timeline">${c.audit.map(e=>`<li><small>${date(e.at)} · ${esc(e.actor)}</small><strong>${esc(String(e.action).replaceAll('_',' '))}</strong></li>`).join('')}</ol></details>`;
 }
 function tracking(c){let actions='';if(c.status==='return_in_progress'){actions=c.returnStage==='awaiting_pickup'?btn('Simulate courier pickup','picked_up','primary'):c.returnStage==='picked_up'?btn('Simulate item received','received','primary'):`<p>Item received. Inspection due ${date(c.inspectionDueAt)}</p>${btn('Inspection passed','pass','primary')}${btn('Inspection failed','fail','danger')}`;if(c.returnStage!=='received')actions+='<p class="muted">Inspection unlocks only after the item is received.</p>';}if(c.status==='refund_ready')actions=btn('Review refund amount','review-refund','primary');if(c.status==='refund_processing')actions=`<p>Demo refund ${money(c.refund.amount)} is processing.</p>${btn('Simulate processed','processed','primary')}${btn('Simulate failure','failed')}`;if(c.status==='inspection_review')actions=`<p>Inspection failed: ${esc(c.inspection.reason)}</p>${btn('Decline with policy reason','inspection-decline','danger')}${btn('Grant refund exception','inspection-refund')}`;if(c.status==='closed')actions='<p class="pill good">Demo refund processed · request closed</p>';return `<section class="card"><h2>Return & refund tracking</h2><p>${esc(({awaiting_pickup:'Awaiting pickup',picked_up:'In transit to merchant',received:'Received by merchant'})[c.returnStage]||'Return not started')}</p><div class="actions">${actions}</div>${c.pickupDueAt&&c.returnStage==='awaiting_pickup'?`<p class="muted">Sample pickup deadline: ${date(c.pickupDueAt)}</p>`:''}${c.refund?`<p class="muted">${esc(c.refund.id)}<br>Original payment method: ${esc(c.refund.method)}</p>`:''}</section>`;}
-function dialog(title,content,submit){modal.innerHTML=`<form id="dialog-form"><h1>${title}</h1><div id="dialog-error" role="alert"></div>${content}<div class="actions"><button type="button" data-action="cancel">Cancel</button><button class="primary" type="submit">Confirm</button></div></form>`;modal.showModal();modal.querySelector('form').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{const ok=await submit(new FormData(e.target));if(ok)modal.close();else modal.querySelector('#dialog-error').textContent='Could not save. Check the error message in the dashboard.';}catch(err){modal.querySelector('#dialog-error').textContent=err.message;}finally{button.disabled=false;}};}
-function decision(action){const override=action!==claim.assessment.recommendation||(action==='refund_now'&&(claim.purchaseType||'physical')==='physical');const draft=action==='approve_return'?`Hi ${claim.customer}, your return is approved. We will arrange pickup, then inspect the item. Any refund requires a separate confirmation after inspection.`:action==='refund_now'?`Hi ${claim.customer}, we approved a refund exception. We will confirm the refund separately.`:action==='request_info'?'Please provide the missing evidence or let us know if you need human assistance.':'We reviewed your request. Please see the policy reason below.';dialog(labels[action]||'Decline request',`<p>${money(claim.amount)} · ${esc(claim.method)} · original payment method</p><p>${action==='approve_return'?'Approves the return only. Money will be released after inspection and refund confirmation.':action==='refund_now'?'Owner exception: skips return inspection, but requires a separate refund confirmation.':'Your decision and explanation will be recorded.'}</p><label>${override?'Override / exception reason (required)':'Decision reason'}<textarea name="reason" ${override||['decline','request_info'].includes(action)?'required':''} maxlength="4000"></textarea></label><label>Customer message<textarea name="message" required maxlength="4000">${esc(draft)}</textarea></label>`,f=>act('decision',{decision:action,reason:f.get('reason'),message:f.get('message'),confirmed:true}));}
-function refund(){const key=crypto.randomUUID();dialog('Confirm refund',`<p>Refund to original ${esc(claim.method)} payment method. No real money moves.</p><label>Amount in INR<input name="amount" type="number" min="0.01" max="${(claim.amount-claim.refunded)/100}" step="0.01" value="${(claim.amount-claim.refunded)/100}" required></label><label>Customer message<textarea name="message" required>Your refund has been initiated in this demo. We will update this thread when processing completes.</textarea></label>`,f=>act('refund',{amount:Math.round(Number(f.get('amount'))*100),key,message:f.get('message'),confirmed:true}));}
-document.addEventListener('click',async e=>{const f=e.target.closest('[data-filter]');if(f){filter=f.dataset.filter;query='';document.querySelector('#search').value='';renderQueue();return;}const t=e.target.closest('[data-type]');if(t){type=t.dataset.type;renderQueue();return;}const row=e.target.closest('tr[data-href]');if(row&&!e.target.closest('a,button')){location.hash=row.dataset.href;return;}const ph=e.target.closest('[data-photo]');if(ph){photoSel={claim:claim.id,id:ph.dataset.photo};renderClaim();return;}const el=e.target.closest('[data-action]');if(!el)return;const a=el.dataset.action;if(a==='cancel'){modal.close();return;}if(a==='new'){dialog('Customer request form',`<p>Preview of the information a customer sends. Photos are requested only when relevant to the issue.</p><label>Your name<input name="customer" required maxlength="4000"></label><label>Email or phone (optional)<input name="customerContact" maxlength="4000"></label><label>Order or booking reference<input name="customerOrderReference" required maxlength="4000"></label><label>Item or service<input name="item" required maxlength="4000"></label><label>What did you purchase?<select name="purchaseType">${Object.entries(purchaseTypes).map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></label><label>What would you like?<select name="requestedResolution"><option value="refund">Refund</option><option value="return">Return</option></select></label><label>Reason<select name="reason">${Object.entries(reasons).map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></label><label>Tell us what happened<textarea name="description" required maxlength="4000" placeholder="Describe the issue in your own words…"></textarea></label><label>Photos or screenshots (optional)<input type="file" name="initialFile" accept="image/png,image/jpeg"></label><small>Attach a PNG or JPEG up to 2 MB if it helps explain the issue.</small><details class="demo-controls"><summary>Demo order setup · not customer-provided</summary><label>Mock amount paid (INR)<input name="amount" type="number" min="1" step="0.01" value="3499" required></label><p class="muted">In a connected product, this comes from the order. This demo uses a mock payment and delivery date.</p></details>`,async f=>{const file=f.get('initialFile');if(file?.size>2*1024*1024)throw Error('Please choose an image smaller than 2 MB.');let c=await api('claims',{customer:f.get('customer'),item:f.get('item'),customerContact:f.get('customerContact'),customerOrderReference:f.get('customerOrderReference'),purchaseType:f.get('purchaseType'),requestedResolution:f.get('requestedResolution'),amount:Math.round(Number(f.get('amount'))*100),reason:f.get('reason'),description:f.get('description')});if(file?.size){const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});c=await api(`claims/${c.id}/evidence`,{version:c.version,kind:'other',name:file.name,data});}location.hash=c.id;await refresh();return true;});modal.querySelector('button[type="submit"]').textContent='Submit request';return;}if(['approve_return','refund_now','request_info','decline'].includes(a)){decision(a);return;}if(a==='review-refund'){refund();return;}if(['picked_up','received'].includes(a)){await act('return',{stage:a});return;}if(['pass','fail'].includes(a)){dialog('Record inspection',`<p>Result: ${a}. Item must have been received.</p><label>Inspection notes<textarea name="reason" ${a==='fail'?'required':''}></textarea></label>`,f=>act('inspection',{result:a,reason:f.get('reason')}));return;}if(a.startsWith('inspection-')){dialog('Resolve failed inspection',`<label>Policy reason / exception justification<textarea name="reason" required></textarea></label><label>Customer message<textarea name="message" required></textarea></label>`,f=>act('resolve-inspection',{resolution:a==='inspection-refund'?'refund':'decline',reason:f.get('reason'),message:f.get('message'),confirmed:true}));return;}if(['processed','failed'].includes(a)){await act('simulate-refund',{result:a});return;}if(a==='assistant')await act('assistant',{enabled:!claim.assistantOn});if(a==='analyse')await act('analyse');});
+function dialog(title,content,submit){modal.className='';modal.innerHTML=`<form id="dialog-form"><h1>${title}</h1><div id="dialog-error" role="alert"></div>${content}<div class="actions"><button type="button" data-action="cancel">Cancel</button><button class="primary" type="submit">Confirm</button></div></form>`;modal.showModal();modal.querySelector('form').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{const ok=await submit(new FormData(e.target));if(ok)modal.close();else modal.querySelector('#dialog-error').textContent='Could not save. Check the error message in the dashboard.';}catch(err){modal.querySelector('#dialog-error').textContent=err.message;}finally{button.disabled=false;}};}
+// Confirmation dialogs (C4): design/Confirm.dc.html, RefundConfirm.dc.html, InspectionFailed.dc.html.
+const closeIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+async function save(action,body){claim=await api(`claims/${claim.id}/${action}`,{...body,version:claim.version});await refresh();notice('Saved to the claim record.');return true;}
+function openDialog({title,body,submitLabel,danger=false,onSubmit,onReady}){
+  const c=claim;
+  modal.className='dlg';
+  modal.innerHTML=`<form id="dialog-form" class="confirm">
+    <div class="dlg-head"><div><small class="mono">${esc(c.id)} · ${esc(c.orderId)} · ${esc(c.customer)}</small><h2 id="dlg-title">${title}</h2></div><button type="button" class="icon-button" data-action="cancel" aria-label="Close">${closeIcon}</button></div>
+    <div class="dlg-body"><div id="dialog-error" class="dialog-error" role="alert"></div>${body}</div>
+    <div class="dlg-foot"><small>Logged as Nikhil Verma (Owner), with the recommendation, your choice and any reason.</small><div class="actions"><button type="button" data-action="cancel">Cancel</button><button type="submit" class="${danger?'danger-solid':'primary'}">${submitLabel}</button></div></div>
+  </form>`;
+  modal.setAttribute('aria-labelledby','dlg-title');
+  const form=modal.querySelector('form');
+  modal.showModal();
+  onReady?.(form);
+  form.onsubmit=async e=>{
+    e.preventDefault();
+    const button=form.querySelector('[type=submit]'),error=form.querySelector('#dialog-error');
+    button.disabled=true;error.textContent='';
+    try{if(await onSubmit(new FormData(form),form))modal.close();}
+    catch(err){error.textContent=err.message;}
+    finally{button.disabled=false;}
+  };
+}
+const firstName=c=>c.customer.split(' ')[0];
+const itemNameOf=c=>c.item.split(' · ')[0];
+const sign='\n\nKaveri Home Studio';
+function steps(list){return `<div class="dlg-section"><span class="dlg-label">What happens next</span><ol class="steps">${list.map(([when,what,sub],i)=>`<li class="${i===0?'now':''}"><span>${esc(when)}</span><strong>${esc(what)}</strong><small>${esc(sub)}</small></li>`).join('')}</ol></div>`;}
+function decisionDialog(action){
+  const c=claim,a=c.assessment||{},p=c.policy||{};
+  const physical=(c.purchaseType||'physical')==='physical';
+  const rec=a.recommendation,judgement=rec==='needs_judgement',override=!judgement&&action!==rec;
+  const refundable=money(c.amount-c.refunded),item=itemNameOf(c).toLowerCase(),first=firstName(c);
+  const windowClause=(a.checks||[]).find(x=>x.label==='Claim window')?.clauseId||'2.1';
+  const titles={approve_return:'Approve the return?',refund_now:physical?'Refund now, without a return?':'Approve the refund?',request_info:'Ask the customer for more?',decline:'Decline this request?'};
+  const submit={approve_return:'Approve return & send',refund_now:'Approve refund & send',request_info:'Send request',decline:'Decline & send'};
+  const drafts={
+    approve_return:`Hi ${first}, sorry about the problem with your ${item}. We've approved your return. Our courier partner will collect it within ${p.pickupDays||5} days; please keep it in the original box if you can. Once it reaches us and is inspected, we'll refund ${refundable} to your original ${c.method} payment method.`,
+    refund_now:`Hi ${first}, sorry about the problem with your ${item}. We're refunding ${refundable} to your original ${c.method} payment method, and you'll get a confirmation once it's on its way.${physical?' There’s no need to send the item back.':''}`,
+    request_info:`Hi ${first}, thanks for your request. To help us review it, could you send [what you need]? If you can't, just reply and a person will review your request.`,
+    decline:`Hi ${first}, we've reviewed your request and can't offer a return or refund this time${c.claimWindowMet===false?` because it arrived after our ${p.claimDays||7}-day window (policy §${windowClause})`:' because [reason]'}. If you think we've missed something, reply to this message.`,
+  };
+  const reasonLabel=override?`Why are you choosing differently from the recommendation? (required, internal)`:{decline:'Reason for declining (required, logged)',request_info:'What do you need from the customer? (required, logged)',refund_now:physical?'Why skip the return and inspection? (required, owner exception)':'Note (optional, internal)'}[action];
+  const reasonRequired=override||action==='decline'||action==='request_info'||(action==='refund_now'&&physical);
+  const summary={approve_return:['Refund after inspection',refundable],refund_now:['Refund, after you confirm the amount',refundable],request_info:['Refund','Not decided yet'],decline:['Refund','None']}[action];
+  const next={
+    approve_return:steps([['Now','Return approved','Customer notified'],[`By ${shortDate(Date.now()+(p.pickupDays||5)*DAY)}`,'Courier pickup',`Within ${p.pickupDays||5} days`],[`${p.inspectionDays||2} days after receipt`,'You inspect','Pass or fail, with notes'],['You confirm',`Release ${refundable}`,'Then Razorpay refund timelines']]),
+    refund_now:steps([['Now','Refund approved',physical?'No return or inspection':'Customer notified'],['Next','You confirm the amount','Full or partial, with a reason'],['Then','Refund initiated','Razorpay refund timelines']]),
+    request_info:steps([['Now','Message sent','Request moves to Waiting for customer'],['Customer replies','Reassessed','Comes back to Needs your decision']]),
+    decline:steps([['Now','Request declined','Customer gets your message'],['Afterwards','Kept on record','Reason and policy clause logged']]),
+  }[action];
+  const compare=judgement?`<div class="compare neutral">There’s no recommendation for this request, so this isn’t an override.</div>`:override?`<div class="compare warn"><strong>This differs from the recommendation</strong><span>Recommended: ${esc(labels[rec]||rec)}. Your reason is logged and used to review future recommendations; it doesn’t change your policy.</span></div>`:`<div class="compare ok">${icon.check}Same as the recommendation</div>`;
+  openDialog({
+    title:titles[action],submitLabel:submit[action],danger:action==='decline',
+    body:`<div class="dlg-tiles"><div><small>Item</small><strong>${esc(c.item)}</strong></div><div><small>${summary[0]}</small><strong class="mono">${summary[1]}</strong></div><div><small>Refund to</small><strong>Original method · ${esc(c.method)}</strong></div></div>
+      ${next}
+      <div class="dlg-section"><span class="dlg-label">Compared with the recommendation</span>${compare}</div>
+      ${reasonLabel?`<label for="dlg-reason">${reasonLabel}</label><textarea id="dlg-reason" name="reason" rows="2" ${reasonRequired?'required':''}></textarea>`:''}
+      <div class="dlg-section"><label for="dlg-msg" class="dlg-label">Message to customer <small>Drafted for you · edit freely · posted in the claim thread</small></label><textarea id="dlg-msg" name="message" rows="6" required maxlength="4000">${esc(drafts[action]+sign)}</textarea></div>`,
+    onSubmit:f=>{
+      const message=f.get('message');
+      if(/\[(what you need|reason)\]/.test(message))throw Error('Replace the text in [square brackets] in the message before sending.');
+      return save('decision',{decision:action,reason:f.get('reason')||'',message,confirmed:true});
+    },
+  });
+}
+function refundDialog(){
+  const c=claim,balance=c.amount-c.refunded,key=crypto.randomUUID(),first=firstName(c);
+  const lastFail=(c.refundHistory||[]).at(-1);
+  const basis=c.inspection?.result==='pass'?`Inspection passed · ${date(c.inspection.at)} · ${c.inspection.actor||'Nikhil Verma'}`:c.inspectionException?'Refund exception approved':'Ready to refund';
+  openDialog({
+    title:'Release the refund?',submitLabel:`Refund ${money(balance)}`,
+    body:`${lastFail?`<div class="compare bad"><strong>The last attempt failed</strong><span>${esc(lastFail.failureReason||'No reason given.')} This is a new attempt with its own reference.</span></div>`:''}
+      <div class="compare ok">${icon.check}${esc(basis)}</div>
+      <fieldset class="dlg-section amount-choice"><legend class="dlg-label">Amount</legend>
+        <label class="radio-card"><input type="radio" name="mode" value="full" checked><span><strong>Full refund</strong><small>${money(balance)}</small></span></label>
+        <label class="radio-card"><input type="radio" name="mode" value="partial"><span><strong>Partial refund</strong><small>Reason required</small></span></label>
+      </fieldset>
+      <div class="partial-fields" hidden><label for="dlg-amount">Amount (₹)</label><input id="dlg-amount" name="amount" type="number" min="0.01" max="${balance/100}" step="0.01" value="${balance/100}"><label for="dlg-partial">Reason for a partial refund (required, shared with the customer)</label><input id="dlg-partial" name="partialReason" maxlength="4000"></div>
+      <dl class="dlg-facts"><dt>Refund to</dt><dd>Original method · ${esc(c.method)}</dd><dt>Payment</dt><dd class="mono">${esc(c.paymentId)}</dd><dt>Refundable balance</dt><dd class="mono">${money(balance)}</dd><dt>After you confirm</dt><dd>Settles per Razorpay refund timelines [verify in docs]</dd></dl>
+      <label for="dlg-msg" class="dlg-label">Message to customer</label><textarea id="dlg-msg" name="message" rows="4" required maxlength="4000">${esc(`Hi ${first}, we've started your refund of ${money(balance)} to your original ${c.method} payment method. Thanks for your patience.`+sign)}</textarea>
+      <label class="check-label"><input type="checkbox" name="checked" required class="inline-check"> <span id="dlg-confirm-text">I’ve checked the amount: refund ${money(balance)} to the original ${esc(c.method)} payment method.</span></label>
+      <p class="muted">Prototype: refunds are simulated. No real money moves.</p>`,
+    onReady:form=>{
+      const sync=()=>{
+        const partial=form.elements.mode.value==='partial',fields=form.querySelector('.partial-fields');
+        fields.hidden=!partial;form.elements.partialReason.required=partial;
+        const paise=partial?Math.round(Number(form.elements.amount.value)*100):balance;
+        const shown=Number.isFinite(paise)&&paise>0?money(paise):'—';
+        form.querySelector('[type=submit]').textContent=`Refund ${shown}`;
+        form.querySelector('#dlg-confirm-text').textContent=`I’ve checked the amount: refund ${shown} to the original ${c.method} payment method.`;
+      };
+      form.addEventListener('change',sync);form.addEventListener('input',sync);
+    },
+    onSubmit:f=>{
+      const partial=f.get('mode')==='partial';
+      const amount=partial?Math.round(Number(f.get('amount'))*100):balance;
+      return save('refund',{amount,key,message:f.get('message'),confirmed:true,...(amount<balance?{partialReason:f.get('partialReason')}:{})});
+    },
+  });
+}
+function inspectionDialog(result){
+  const fail=result==='fail';
+  openDialog({
+    title:fail?'Record a failed inspection':'Record a passed inspection',submitLabel:fail?'Record failed inspection':'Record pass',danger:fail,
+    body:`<p class="muted">${fail?'Note what doesn’t match the claim. You decide next whether to decline or refund anyway.':'The item matches the claim and meets the condition rules (§2.4). You confirm the refund amount next.'}</p>
+      <label for="dlg-notes">${fail?'What did you find? (required)':'Notes (optional)'}</label><textarea id="dlg-notes" name="reason" rows="3" ${fail?'required':''} placeholder="${fail?'e.g. Signs of use; tags removed':'e.g. Crack matches the claim photos'}"></textarea>`,
+    onSubmit:f=>save('inspection',{result,reason:f.get('reason')||''}),
+  });
+}
+function resolveDialog(initial='decline'){
+  const c=claim,first=firstName(c),item=itemNameOf(c).toLowerCase();
+  const msgs={decline:`Hi ${first}, we inspected the ${item} and found ${c.inspection?.reason?c.inspection.reason.replace(/\.$/,'').toLowerCase():'[what you found]'}, so we can't offer a refund under our returns policy (§2.4). We'll send it back to you at no cost.`,refund:`Hi ${first}, we've received the ${item}. As a one-time exception, we'll refund ${money(c.amount-c.refunded)} to your original ${c.method} payment method. You'll see a confirmation once the refund is on its way.`};
+  openDialog({
+    title:'Resolve the failed inspection',submitLabel:'Decline & send message',danger:true,
+    body:`<div class="compare bad"><strong>Inspection failed</strong><span>${esc(c.inspection?.reason||'')}</span></div>
+      <fieldset class="dlg-section"><legend class="dlg-label">Your decision</legend>
+        <label class="radio-card"><input type="radio" name="resolution" value="decline" checked><span><strong>Decline the refund</strong><small>Policy reason required. The customer sees it.</small></span></label>
+        <label class="radio-card"><input type="radio" name="resolution" value="refund"><span><strong>Refund anyway (exception)</strong><small>Your reason is logged. You confirm the amount next.</small></span></label>
+      </fieldset>
+      <label for="dlg-reason" id="dlg-reason-label">Policy reason (required)</label><textarea id="dlg-reason" name="reason" rows="2" required></textarea>
+      <label for="dlg-msg">Message to ${esc(first)}</label><textarea id="dlg-msg" name="message" rows="5" required maxlength="4000">${esc(msgs.decline+sign)}</textarea>`,
+    onReady:form=>{form.addEventListener('change',e=>{
+      if(e.target.name!=='resolution')return;
+      const decline=e.target.value==='decline',btn=form.querySelector('[type=submit]');
+      form.querySelector('#dlg-reason-label').textContent=decline?'Policy reason (required)':'Why make an exception? (required, internal)';
+      form.elements.message.value=msgs[e.target.value]+sign;
+      btn.textContent=decline?'Decline & send message':'Approve exception';btn.className=decline?'danger-solid':'primary';
+    });if(initial==='refund'){const r=form.querySelector('input[value=refund]');r.checked=true;r.dispatchEvent(new Event('change',{bubbles:true}));}},
+    onSubmit:f=>{
+      if(/\[what you found\]/.test(f.get('message')))throw Error('Replace the text in [square brackets] in the message before sending.');
+      return save('resolve-inspection',{resolution:f.get('resolution'),reason:f.get('reason'),message:f.get('message'),confirmed:true});
+    },
+  });
+}
+
+document.addEventListener('click',async e=>{const f=e.target.closest('[data-filter]');if(f){filter=f.dataset.filter;query='';document.querySelector('#search').value='';renderQueue();return;}const t=e.target.closest('[data-type]');if(t){type=t.dataset.type;renderQueue();return;}const row=e.target.closest('tr[data-href]');if(row&&!e.target.closest('a,button')){location.hash=row.dataset.href;return;}const ph=e.target.closest('[data-photo]');if(ph){photoSel={claim:claim.id,id:ph.dataset.photo};renderClaim();return;}const el=e.target.closest('[data-action]');if(!el)return;const a=el.dataset.action;if(a==='cancel'){modal.close();return;}if(a==='new'){dialog('Customer request form',`<p>Preview of the information a customer sends. Photos are requested only when relevant to the issue.</p><label>Your name<input name="customer" required maxlength="4000"></label><label>Email or phone (optional)<input name="customerContact" maxlength="4000"></label><label>Order or booking reference<input name="customerOrderReference" required maxlength="4000"></label><label>Item or service<input name="item" required maxlength="4000"></label><label>What did you purchase?<select name="purchaseType">${Object.entries(purchaseTypes).map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></label><label>What would you like?<select name="requestedResolution"><option value="refund">Refund</option><option value="return">Return</option></select></label><label>Reason<select name="reason">${Object.entries(reasons).map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></label><label>Tell us what happened<textarea name="description" required maxlength="4000" placeholder="Describe the issue in your own words…"></textarea></label><label>Photos or screenshots (optional)<input type="file" name="initialFile" accept="image/png,image/jpeg"></label><small>Attach a PNG or JPEG up to 2 MB if it helps explain the issue.</small><details class="demo-controls"><summary>Demo order setup · not customer-provided</summary><label>Mock amount paid (INR)<input name="amount" type="number" min="1" step="0.01" value="3499" required></label><p class="muted">In a connected product, this comes from the order. This demo uses a mock payment and delivery date.</p></details>`,async f=>{const file=f.get('initialFile');if(file?.size>2*1024*1024)throw Error('Please choose an image smaller than 2 MB.');let c=await api('claims',{customer:f.get('customer'),item:f.get('item'),customerContact:f.get('customerContact'),customerOrderReference:f.get('customerOrderReference'),purchaseType:f.get('purchaseType'),requestedResolution:f.get('requestedResolution'),amount:Math.round(Number(f.get('amount'))*100),reason:f.get('reason'),description:f.get('description')});if(file?.size){const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});c=await api(`claims/${c.id}/evidence`,{version:c.version,kind:'other',name:file.name,data});}location.hash=c.id;await refresh();return true;});modal.querySelector('button[type="submit"]').textContent='Submit request';return;}if(['approve_return','refund_now','request_info','decline'].includes(a)){decisionDialog(a);return;}if(a==='review-refund'){refundDialog();return;}if(['picked_up','received'].includes(a)){await act('return',{stage:a});return;}if(['pass','fail'].includes(a)){inspectionDialog(a);return;}if(a.startsWith('inspection-')){resolveDialog(a==='inspection-refund'?'refund':'decline');return;}if(['processed','failed'].includes(a)){await act('simulate-refund',{result:a});return;}if(a==='assistant')await act('assistant',{enabled:!claim.assistantOn});if(a==='analyse')await act('analyse');});
 document.addEventListener('change',e=>{if(e.target.name==='purchaseType'){const f=e.target.form,physical=e.target.value==='physical';const resolution=f.elements.requestedResolution;resolution.querySelector('option[value="return"]').disabled=!physical;if(!physical)resolution.value='refund';const reason=f.elements.reason;for(const o of reason.options)o.disabled=!physical&&['damaged','wrong_item','missing_item','preference'].includes(o.value);reason.value=physical?'damaged':e.target.value==='digital'?'digital_issue':e.target.value==='service'?'service_issue':'cancellation';}});
 document.addEventListener('input',e=>{if(e.target.id==='search'){query=e.target.value;if(location.hash){location.hash='';return;}renderQueue();}});
 document.addEventListener('submit',async e=>{if(e.target.id==='customer-message-form'){e.preventDefault();const f=new FormData(e.target);await act('messages',{actor:'customer',text:f.get('text'),cannotProvide:f.get('cannotProvide')==='on'});}if(e.target.id==='message-form'){e.preventDefault();const f=new FormData(e.target);await act('messages',{actor:f.get('actor'),text:f.get('text'),cannotProvide:f.get('cannotProvide')==='on'});}if(e.target.id==='evidence-form'){e.preventDefault();const f=new FormData(e.target),file=f.get('file');if(file.size>2*1024*1024){notice('Image must be smaller than 2 MB.',true);return;}const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});await act('evidence',{kind:f.get('kind'),name:file.name,data});}});
