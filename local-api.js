@@ -3,7 +3,8 @@
 import { handle } from './server/api.js';
 import { seed } from './server/domain.js';
 
-const STORAGE_KEY = 'returns-refunds-demo:v1';
+// Bump the version when the seed changes, so returning visitors get the new demo data.
+const STORAGE_KEY = 'returns-refunds-demo:v2';
 let storePromise = null;
 let persistent = true;
 

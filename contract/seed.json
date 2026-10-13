@@ -92,8 +92,8 @@
       "returnStage": null,
       "assistantOn": true,
       "evidence": [
-        { "id": "ev_1041_1", "kind": "full", "name": "sheets.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 75.1, "superseded": false },
-        { "id": "ev_1041_2", "kind": "other", "name": "label.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 75.08, "superseded": false }
+        { "id": "ev_1041_1", "kind": "full", "name": "sheets.jpg", "fixture": true, "image": "/media/sheets-full.svg", "capturedHoursAgo": 75.1, "superseded": false },
+        { "id": "ev_1041_2", "kind": "other", "name": "label.jpg", "fixture": true, "image": "/media/sheets-label.svg", "capturedHoursAgo": 75.08, "superseded": false }
       ],
       "messages": [
         { "actor": "customer", "hoursAgo": 75, "text": "I ordered a King set but received Queen. The label says Queen.", "evidenceIds": ["ev_1041_1", "ev_1041_2"] }
@@ -141,8 +141,8 @@
       "returnStage": null,
       "assistantOn": true,
       "evidence": [
-        { "id": "ev_1040_1", "kind": "closeup", "name": "mugs1.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": null, "superseded": false },
-        { "id": "ev_1040_2", "kind": "full", "name": "mugs2.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": null, "superseded": false }
+        { "id": "ev_1040_1", "kind": "closeup", "name": "mugs1.jpg", "fixture": true, "image": "/media/mugs-chipped.svg", "capturedHoursAgo": null, "superseded": false },
+        { "id": "ev_1040_2", "kind": "full", "name": "mugs2.jpg", "fixture": true, "image": "/media/mugs-set.svg", "capturedHoursAgo": null, "superseded": false }
       ],
       "messages": [
         { "actor": "customer", "hoursAgo": 87, "text": "Two of the four mugs arrived chipped at the rim.", "evidenceIds": ["ev_1040_1", "ev_1040_2"] }
@@ -274,7 +274,7 @@
       "returnStage": null,
       "assistantOn": true,
       "evidence": [
-        { "id": "ev_1037_1", "kind": "closeup", "name": "vase.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 46.7, "superseded": false }
+        { "id": "ev_1037_1", "kind": "closeup", "name": "vase.jpg", "fixture": true, "image": "/media/vase-crack.svg", "capturedHoursAgo": 46.7, "superseded": false }
       ],
       "messages": [
         { "actor": "customer", "hoursAgo": 46.67, "text": "The vase arrived with a crack near the neck.", "evidenceIds": ["ev_1037_1"] },
@@ -358,8 +358,8 @@
       "returnStage": "awaiting_pickup",
       "assistantOn": true,
       "evidence": [
-        { "id": "ev_1033_1", "kind": "closeup", "name": "rim.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 125.1, "superseded": false },
-        { "id": "ev_1033_2", "kind": "full", "name": "planter.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 125.08, "superseded": false }
+        { "id": "ev_1033_1", "kind": "closeup", "name": "rim.jpg", "fixture": true, "image": "/media/planter-rim.svg", "capturedHoursAgo": 125.1, "superseded": false },
+        { "id": "ev_1033_2", "kind": "full", "name": "planter.jpg", "fixture": true, "image": "/media/planter-full.svg", "capturedHoursAgo": 125.08, "superseded": false }
       ],
       "messages": [
         { "actor": "customer", "hoursAgo": 125, "text": "The planter rim is broken.", "evidenceIds": ["ev_1033_1", "ev_1033_2"] },
@@ -420,7 +420,7 @@
       "returnStage": "received",
       "assistantOn": true,
       "evidence": [
-        { "id": "ev_1029_1", "kind": "full", "name": "plates.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 172.1, "superseded": false }
+        { "id": "ev_1029_1", "kind": "full", "name": "plates.jpg", "fixture": true, "image": "/media/plates-small.svg", "capturedHoursAgo": 172.1, "superseded": false }
       ],
       "messages": [
         { "actor": "customer", "hoursAgo": 172, "text": "Received side plates instead of dinner plates.", "evidenceIds": ["ev_1029_1"] },
@@ -452,8 +452,8 @@
       "returnStage": "received",
       "assistantOn": true,
       "evidence": [
-        { "id": "ev_1027_1", "kind": "closeup", "name": "glass.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 221.1, "superseded": false },
-        { "id": "ev_1027_2", "kind": "full", "name": "clock.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 221.08, "superseded": false }
+        { "id": "ev_1027_1", "kind": "closeup", "name": "glass.jpg", "fixture": true, "image": "/media/clock-glass.svg", "capturedHoursAgo": 221.1, "superseded": false },
+        { "id": "ev_1027_2", "kind": "full", "name": "clock.jpg", "fixture": true, "image": "/media/clock-full.svg", "capturedHoursAgo": 221.08, "superseded": false }
       ],
       "messages": [
         { "actor": "customer", "hoursAgo": 221, "text": "Clock glass is cracked.", "evidenceIds": ["ev_1027_1", "ev_1027_2"] },
@@ -489,7 +489,7 @@
       "assistantOn": true,
       "inspectionException": true,
       "evidence": [
-        { "id": "ev_1025_1", "kind": "full", "name": "runner.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 73.1, "superseded": false }
+        { "id": "ev_1025_1", "kind": "full", "name": "runner.jpg", "fixture": true, "image": "/media/runner-blue.svg", "capturedHoursAgo": 73.1, "superseded": false }
       ],
       "messages": [
         { "actor": "customer", "hoursAgo": 73, "text": "Received a blue runner. I ordered ochre.", "evidenceIds": ["ev_1025_1"] },
@@ -521,8 +521,8 @@
       "returnStage": "received",
       "assistantOn": true,
       "evidence": [
-        { "id": "ev_1024_1", "kind": "closeup", "name": "split.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 339.1, "superseded": false },
-        { "id": "ev_1024_2", "kind": "full", "name": "tray.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 339.08, "superseded": false }
+        { "id": "ev_1024_1", "kind": "closeup", "name": "split.jpg", "fixture": true, "image": "/media/tray-split.svg", "capturedHoursAgo": 339.1, "superseded": false },
+        { "id": "ev_1024_2", "kind": "full", "name": "tray.jpg", "fixture": true, "image": "/media/tray-full.svg", "capturedHoursAgo": 339.08, "superseded": false }
       ],
       "messages": [
         { "actor": "customer", "hoursAgo": 339, "text": "Tray is split along one side.", "evidenceIds": ["ev_1024_1", "ev_1024_2"] },
@@ -588,7 +588,7 @@
       "assistantOn": true,
       "inspectionException": true,
       "evidence": [
-        { "id": "ev_1019_1", "kind": "full", "name": "bowls.jpg", "fixture": true, "image": "/media/placeholder-photo.svg", "capturedHoursAgo": 429.1, "superseded": false }
+        { "id": "ev_1019_1", "kind": "full", "name": "bowls.jpg", "fixture": true, "image": "/media/bowls.svg", "capturedHoursAgo": 429.1, "superseded": false }
       ],
       "messages": [
         { "actor": "customer", "hoursAgo": 429, "text": "Bowls are a different glaze from the listing.", "evidenceIds": ["ev_1019_1"] },
