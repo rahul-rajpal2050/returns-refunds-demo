@@ -20,7 +20,8 @@ function event(c, at, actor, action, detail) {
 }
 export function sendReminder(c, now, actor='assistant') {
   const at=new Date(now).toISOString();
-  c.messages.push({id:globalThis.crypto.randomUUID(),at,actor,reminder:true,text:`A reminder: please reply with the requested information by ${new Date(c.customerReplyDueAt).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})}. If you cannot provide it, let us know so a person can review your request.`});
+  const replyBy=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(c.customerReplyDueAt));
+  c.messages.push({id:globalThis.crypto.randomUUID(),at,actor,reminder:true,text:`A reminder: please reply with the requested information by ${replyBy} IST. If you cannot provide it, let us know so a person can review your request.`});
   c.customerReminderSentAt=at;
   c.customerReminderSource=actor==='merchant'?'manual':'automatic';
   event(c,at,actor,'customer_reminder','One reminder sent in the local claim thread; no external message was sent.');
